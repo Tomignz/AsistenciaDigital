@@ -1,30 +1,30 @@
-// src/components/QRCodeGenerator.jsx
 import { useState, useRef } from 'react';
 import { QRCode } from 'react-qrcode-logo';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const QRCodeGenerator = () => {
+const QRGenerator = () => {
   const [qrId, setQrId] = useState('');
   const [showModal, setShowModal] = useState(false);
   const qrRef = useRef();
 
-const handleSubmit = () => {
-  const newQr = `qr-${Math.floor(Math.random() * 100000)}`;
-  setQrId(newQr);
-  setShowModal(true);
-  console.log("QR generado:", newQr);
-};
+  const handleSubmit = () => {
+    console.log('handleSubmit ejecutado');
+    const newQr = `qr-${Math.floor(Math.random() * 100000)}`;
+    setQrId(newQr);
+    setShowModal(true);
+  };
 
   const handleDownload = () => {
+    if (!qrRef.current) return;
     const canvas = qrRef.current.querySelector('canvas');
+    if (!canvas) return;
+
     const url = canvas.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = url;
     a.download = `${qrId}.png`;
     a.click();
   };
-
-  
 
   const handleCopyLink = () => {
     const link = `${window.location.origin}/asistencia/${qrId}`;
@@ -91,4 +91,4 @@ const handleSubmit = () => {
   );
 };
 
-export default QRCodeGenerator;
+export default QRGenerator;
