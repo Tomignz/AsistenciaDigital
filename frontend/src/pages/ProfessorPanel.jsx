@@ -1,47 +1,169 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // useEffect imported
+import { useNavigate } from 'react-router-dom'; // useNavigate for logout
+import { LogOut } from 'lucide-react'; // For logout button
 import QRGenerator from '../components/QRGenerator';
+import { authenticatedFetch } from '../utils/api'; // Added import
 
-const ProfessorPanel = ({ attendances: initialAttendances = [] }) => {
+const ProfessorPanel = () => {
   const [activeTab, setActiveTab] = useState('qr');
-  const [attendances, setAttendances] = useState(initialAttendances);
+  const [attendances, setAttendances] = useState([]); // Initialized as empty array
   const [showModal, setShowModal] = useState(false);
-  const [editIndex, setEditIndex] = useState(null);
-  const [formName, setFormName] = useState('');
-  const [formDate, setFormDate] = useState('');
+  const [editIndex, setEditIndex] = useState(null); // Stores original index for updates
+  const [formNombre, setFormNombre] = useState('');
+  const [formApellido, setFormApellido] = useState('');
+  const [formMateria, setFormMateria] = useState('');
+  const [formFecha, setFormFecha] = useState('');
+  const [formPresente, setFormPresente] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // Loading state
+  const [error, setError] = useState(null); // Error state
+  const navigate = useNavigate(); // For logout
+
+  const API_BASE_URL = 'http://localhost:3000/api/asistencias';
+
+  useEffect(() => {
+    if (activeTab === 'asistencias') {
+      const fetchAttendances = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+          // TODO: Future enhancement: Filter attendances by professorId
+          // e.g., const res = await authenticatedFetch(`${API_BASE_URL}?profesorId=${currentUser.id}`);
+          // This requires backend support and access to current user's ID.
+          const res = await authenticatedFetch(API_BASE_URL);
+          if (!res.ok) {
+            if (res.status === 401 || res.status === 403) {
+              alert('Acceso denegado. Por favor, inicie sesión de nuevo.');
+              navigate('/login');
+            } else {
+              throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            return;
+          }
+          const data = await res.json();
+          setAttendances(data);
+        } catch (err) {
+          console.error('Error al obtener asistencias:', err);
+          setError(err.message || 'Error al cargar datos.');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchAttendances();
+    }
+  }, [activeTab, navigate]);
 
   const openAddModal = () => {
     setEditIndex(null);
-    setFormName('');
-    setFormDate('');
+    setFormNombre('');
+    setFormApellido('');
+    setFormMateria('');
+    setFormFecha('');
+    setFormPresente(true);
     setShowModal(true);
   };
 
   const openEditModal = (index) => {
+    const entry = attendances[index];
     setEditIndex(index);
-    setFormName(attendances[index].name);
-    setFormDate(attendances[index].timestamp);
+    setFormNombre(entry.nombre);
+    setFormApellido(entry.apellido || '');
+    setFormMateria(entry.materia);
+    setFormFecha(entry.fecha ? new Date(entry.fecha).toISOString().split('T')[0] : '');
+    setFormPresente(entry.presente === undefined ? true : entry.presente);
     setShowModal(true);
   };
 
-  const handleSave = () => {
-    if (!formName || !formDate) {
-      alert('Por favor completa todos los campos');
+  const handleSave = async () => {
+    if (!formNombre || !formApellido || !formFecha || !formMateria) {
+      alert('Por favor completa todos los campos (Nombre, Apellido, Fecha, Materia)');
       return;
     }
-    const updatedAttendance = { name: formName, timestamp: formDate };
-    if (editIndex === null) {
-      setAttendances([...attendances, updatedAttendance]);
-    } else {
-      const updated = [...attendances];
-      updated[editIndex] = updatedAttendance;
-      setAttendances(updated);
+    const payload = {
+      nombre: formNombre,
+      apellido: formApellido,
+      materia: formMateria,
+      fecha: formFecha,
+      presente: formPresente,
+    };
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      let res;
+      let updatedEntry;
+      if (editIndex === null) { // Adding new
+        res = await authenticatedFetch(API_BASE_URL, { method: 'POST', body: payload });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        updatedEntry = await res.json();
+        setAttendances([...attendances, updatedEntry]);
+      } else { // Editing existing
+        const entryToUpdate = attendances[editIndex];
+        if (!entryToUpdate || !entryToUpdate._id) {
+          alert("Error: No se pudo encontrar el ID de la asistencia para actualizar.");
+          setIsLoading(false);
+          return;
+        }
+        const id = entryToUpdate._id;
+        res = await authenticatedFetch(`${API_BASE_URL}/${id}`, { method: 'PUT', body: payload });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        updatedEntry = await res.json();
+        const updatedAttendances = [...attendances];
+        updatedAttendances[editIndex] = updatedEntry;
+        setAttendances(updatedAttendances);
+      }
+      setShowModal(false);
+    } catch (err) {
+      console.error('Error al guardar:', err);
+      setError(err.message || 'Error al guardar datos.');
+      alert(`Error al guardar la asistencia: ${err.message}`);
+    } finally {
+      setIsLoading(false);
     }
-    setShowModal(false);
   };
 
-  const handleDelete = (index) => {
-    if (window.confirm('¿Seguro que quieres eliminar esta asistencia?')) {
-      setAttendances(attendances.filter((_, i) => i !== index));
+  const handleDelete = async (index) => {
+    if (!window.confirm('¿Seguro que quieres eliminar esta asistencia?')) return;
+
+    const entryToDelete = attendances[index];
+    if (!entryToDelete || !entryToDelete._id) {
+      alert("Error: No se pudo encontrar el ID de la asistencia para eliminar.");
+      return;
+    }
+    const id = entryToDelete._id;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await authenticatedFetch(`${API_BASE_URL}/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          alert('Acceso denegado. Por favor, inicie sesión de nuevo.');
+          navigate('/login');
+        } else {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return;
+      }
+      const updatedAttendances = [...attendances];
+      updatedAttendances.splice(index, 1);
+      setAttendances(updatedAttendances);
+    } catch (err) {
+      console.error('Error al eliminar:', err);
+      setError(err.message || 'Error al eliminar datos.');
+      alert(`Error al eliminar la asistencia: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    if (window.confirm('¿Deseas cerrar sesión?')) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      localStorage.removeItem('userRole');
+      navigate('/login');
     }
   };
 
@@ -49,9 +171,18 @@ const ProfessorPanel = ({ attendances: initialAttendances = [] }) => {
     <div className="min-h-screen w-full px-6 py-10 bg-gradient-to-br from-blue-50 to-white dark:from-gray-900 dark:to-gray-800">
       <div className="max-w-6xl mx-auto bg-white dark:bg-gray-900 rounded-3xl shadow-xl overflow-hidden">
         <div className="p-10">
-          <h2 className="text-4xl font-extrabold mb-10 text-center text-gray-800 dark:text-white">
-            Panel de Administración
-          </h2>
+          <div className="flex justify-between items-center mb-10">
+            <h2 className="text-4xl font-extrabold text-gray-800 dark:text-white">
+              Panel del Profesor
+            </h2>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-600 px-4 py-2 rounded-lg border border-red-500 hover:bg-red-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              <LogOut size={20} /> Cerrar sesión
+            </button>
+          </div>
+
 
           <div className="flex justify-center gap-6 mb-10">
             <button
@@ -91,47 +222,56 @@ const ProfessorPanel = ({ attendances: initialAttendances = [] }) => {
                 </button>
               </div>
 
-              <div className="overflow-x-auto rounded-2xl shadow">
-                <table className="min-w-full table-auto text-sm bg-white dark:bg-gray-800">
-                  <thead className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                    <tr>
-                      <th className="px-6 py-4 text-left">Nombre</th>
-                      <th className="px-6 py-4 text-left">Fecha</th>
-                      <th className="px-6 py-4 text-center">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {attendances.length > 0 ? (
-                      attendances.map((entry, index) => (
-                        <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700 border-b dark:border-gray-700">
-                          <td className="px-6 py-4">{entry.name}</td>
-                          <td className="px-6 py-4">{entry.timestamp}</td>
-                          <td className="px-6 py-4 text-center flex justify-center gap-3">
-                            <button
-                              onClick={() => openEditModal(index)}
-                              className="bg-yellow-400 hover:bg-yellow-500 text-black font-medium px-4 py-1 rounded-xl"
-                            >
-                              Editar
-                            </button>
-                            <button
-                              onClick={() => handleDelete(index)}
-                              className="bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-1 rounded-xl"
-                            >
-                              Eliminar
-                            </button>
+              {isLoading && <p className="text-center text-gray-500 dark:text-gray-400">Cargando asistencias...</p>}
+              {error && <p className="text-center text-red-500 dark:text-red-400">Error: {error}</p>}
+
+              {!isLoading && !error && (
+                <div className="overflow-x-auto rounded-2xl shadow">
+                  <table className="min-w-full table-auto text-sm bg-white dark:bg-gray-800">
+                    <thead className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                      <tr>
+                        <th className="px-6 py-4 text-left">Nombre Completo</th>
+                        <th className="px-6 py-4 text-left">Materia</th>
+                        <th className="px-6 py-4 text-left">Fecha</th>
+                        <th className="px-6 py-4 text-left">Presente</th>
+                        <th className="px-6 py-4 text-center">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {attendances.length > 0 ? (
+                        attendances.map((entry, index) => (
+                          <tr key={entry._id || index} className="hover:bg-gray-50 dark:hover:bg-gray-700 border-b dark:border-gray-700">
+                            <td className="px-6 py-4">{`${entry.nombre} ${entry.apellido || ''}`}</td>
+                            <td className="px-6 py-4">{entry.materia}</td>
+                            <td className="px-6 py-4">{entry.fecha ? new Date(entry.fecha).toLocaleDateString() : 'N/A'}</td>
+                            <td className="px-6 py-4">{entry.presente ? 'Sí' : 'No'}</td>
+                            <td className="px-6 py-4 text-center flex justify-center gap-3">
+                              <button
+                                onClick={() => openEditModal(index)}
+                                className="bg-yellow-400 hover:bg-yellow-500 text-black font-medium px-4 py-1 rounded-xl"
+                              >
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => handleDelete(index)}
+                                className="bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-1 rounded-xl"
+                              >
+                                Eliminar
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="5" className="text-center py-6 text-gray-500 dark:text-gray-400">
+                            No hay asistencias registradas.
                           </td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="3" className="text-center py-6 text-gray-500 dark:text-gray-400">
-                          No hay asistencias registradas.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
               {showModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -144,21 +284,55 @@ const ProfessorPanel = ({ attendances: initialAttendances = [] }) => {
                       <label className="block text-gray-700 dark:text-white mb-1 font-medium">Nombre</label>
                       <input
                         type="text"
-                        value={formName}
-                        onChange={(e) => setFormName(e.target.value)}
+                        value={formNombre}
+                        onChange={(e) => setFormNombre(e.target.value)}
                         className="w-full px-4 py-2 border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"
                         placeholder="Nombre del asistente"
                       />
                     </div>
 
-                    <div className="mb-6">
+                    <div className="mb-4">
+                      <label className="block text-gray-700 dark:text-white mb-1 font-medium">Apellido</label>
+                      <input
+                        type="text"
+                        value={formApellido}
+                        onChange={(e) => setFormApellido(e.target.value)}
+                        className="w-full px-4 py-2 border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"
+                        placeholder="Apellido del asistente"
+                      />
+                    </div>
+                    
+                    <div className="mb-4">
+                      <label className="block text-gray-700 dark:text-white mb-1 font-medium">Materia</label>
+                      <input
+                        type="text"
+                        value={formMateria}
+                        onChange={(e) => setFormMateria(e.target.value)}
+                        className="w-full px-4 py-2 border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"
+                        placeholder="Nombre de la materia"
+                      />
+                    </div>
+
+                    <div className="mb-4">
                       <label className="block text-gray-700 dark:text-white mb-1 font-medium">Fecha</label>
                       <input
                         type="date"
-                        value={formDate}
-                        onChange={(e) => setFormDate(e.target.value)}
+                        value={formFecha}
+                        onChange={(e) => setFormFecha(e.target.value)}
                         className="w-full px-4 py-2 border rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white"
                       />
+                    </div>
+
+                    <div className="mb-6">
+                        <label className="flex items-center">
+                            <input
+                            type="checkbox"
+                            checked={formPresente}
+                            onChange={(e) => setFormPresente(e.target.checked)}
+                            className="mr-2 h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            />
+                            <span className="font-medium text-gray-700 dark:text-white">¿Presente?</span>
+                        </label>
                     </div>
 
                     <div className="flex justify-end gap-4">

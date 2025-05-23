@@ -15,7 +15,10 @@ const AttendanceForm = ({ onSubmit }) => {
   };
 
   const handleLogout = () => {
-    // Aquí puedes limpiar el estado de sesión si lo estás usando
+    // Limpiar el estado de sesión
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    localStorage.removeItem('userRole');
     navigate('/login');
   };
 

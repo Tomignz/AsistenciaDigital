@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User');
+const jwt = require('jsonwebtoken'); // Added for JWT
+const User = require('../models/User.js');
 
 // Registro
 router.post('/register', async (req, res) => {
@@ -49,8 +50,15 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Usuario o contraseña incorrectos' });
     }
 
-    // Respondemos con rol para frontend
-    res.json({ role: user.role, username: user.username });
+    // Generate JWT Token
+    // REMEMBER TO CHANGE 'YOUR_SECRET_KEY' FOR PRODUCTION
+    const token = jwt.sign(
+      { userId: user._id, username: user.username, role: user.role },
+      'YOUR_SECRET_KEY', // It's crucial to use a strong, environment-specific secret in production
+      { expiresIn: '1h' }
+    );
+
+    res.json({ message: 'Login successful', token: token, role: user.role, username: user.username });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error interno del servidor' });
