@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Asistencia = require('../models/Asistencia');
-const User = require('../models/User');  // Asegúrate de tener el modelo User creado
+const User = require('../models/User.js');  // Asegúrate de tener el modelo User creado
 const bcrypt = require('bcryptjs');
 
 // --- RUTAS DE ASISTENCIAS ---
@@ -17,6 +17,68 @@ router.post('/', async (req, res) => {
   }
 });
 
+// POST /api/asistencias/scan - Registrar asistencia mediante escaneo QR
+router.post('/scan', async (req, res) => {
+  const { sessionId } = req.body;
+  const qrSessions = req.app.locals.qrSessions; // Access global qrSessions
+
+  if (!sessionId) {
+    return res.status(400).json({ message: 'sessionId es requerido.' });
+  }
+
+  if (!qrSessions.has(sessionId)) {
+    return res.status(404).json({ message: 'Sesión QR no válida o no encontrada.' });
+  }
+
+  const session = qrSessions.get(sessionId);
+
+  if (Date.now() > session.expiryTime) {
+    qrSessions.delete(sessionId); // Clean up expired session
+    return res.status(410).json({ message: 'Sesión QR ha expirado.' });
+  }
+
+  if (!req.user || !req.user.userId) {
+      // This should ideally be caught by authMiddleware if the route is protected
+      return res.status(401).json({ message: 'Usuario no autenticado.' });
+  }
+  const studentId = req.user.userId;
+
+  if (session.registrations.includes(studentId)) {
+    return res.status(409).json({ message: 'Ya te has registrado para esta sesión.' });
+  }
+
+  try {
+    const student = await User.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ message: 'Estudiante no encontrado.' });
+    }
+
+    const nuevaAsistencia = new Asistencia({
+      nombre: student.username, // Using username as 'nombre'
+      apellido: student.apellido || '', // Assuming User model might have 'apellido'
+      materia: session.materia,
+      fecha: new Date(),
+      presente: true,
+      userId: studentId,
+      sessionId: sessionId,
+    });
+
+    await nuevaAsistencia.save();
+
+    // Add user to session registrations to prevent double scanning
+    session.registrations.push(studentId);
+    qrSessions.set(sessionId, session); // Update the session in the map
+
+    res.status(201).json({
+      message: 'Asistencia registrada correctamente.',
+      asistencia: nuevaAsistencia,
+    });
+  } catch (error) {
+    console.error('Error al registrar asistencia por QR:', error);
+    res.status(500).json({ message: 'Error interno del servidor al registrar asistencia.' });
+  }
+});
+
 // GET: Obtener todas las asistencias
 router.get('/', async (req, res) => {
   try {
@@ -24,43 +86,6 @@ router.get('/', async (req, res) => {
     res.json(asistencias);
   } catch (error) {
     res.status(500).json({ error: error.message });
-  }
-});
-
-// --- RUTAS DE AUTENTICACIÓN ---
-
-// POST: Registrar nuevo usuario
-router.post('/signup', async (req, res) => {
-  const { username, password, role } = req.body;
-  try {
-    // Verificar si usuario ya existe
-    const existingUser = await User.findOne({ username });
-    if (existingUser) return res.status(400).json({ error: 'El usuario ya existe' });
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ username, password: hashedPassword, role });
-    await user.save();
-
-    res.status(201).json({ message: 'Usuario creado exitosamente' });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-// POST: Login de usuario
-router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-  try {
-    const user = await User.findOne({ username });
-    if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ error: 'Contraseña incorrecta' });
-
-    // Retornar info básica, luego se puede implementar JWT para sesiones
-    res.json({ username: user.username, role: user.role });
-  } catch (error) {
-    res.status(500).json({ error: 'Error interno' });
   }
 });
 

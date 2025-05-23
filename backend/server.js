@@ -6,6 +6,9 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Initialize qrSessions map on app.locals
+app.locals.qrSessions = new Map();
+
 // Middlewares
 app.use(cors());
 app.use(express.json());
@@ -16,12 +19,17 @@ mongoose.connect('mongodb://127.0.0.1:27017/asistencia-back')
   .catch((err) => console.error('❌ Error al conectar a MongoDB:', err));
 
 // Rutas
+const authMiddleware = require('./middleware/auth.middleware.js'); // Added for JWT
 const asistenciaRoutes = require('./routes/asistencia.routes');
-app.use('/api/asistencias', asistenciaRoutes);
+app.use('/api/asistencias', authMiddleware, asistenciaRoutes); // Protected asistencia routes
 
 // IMPORTAR y USAR rutas de auth (signup, login)
 const authRoutes = require('./routes/auth.routes');
 app.use('/api/auth', authRoutes);
+
+// IMPORTAR y USAR rutas de QR
+const qrRoutes = require('./routes/qr.routes.js');
+app.use('/api/qr', authMiddleware, qrRoutes); // Protected by authMiddleware
 
 // Iniciar servidor
 app.listen(PORT, () => {

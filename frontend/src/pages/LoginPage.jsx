@@ -19,17 +19,30 @@ export default function Login() {
       });
       const data = await res.json();
 
-      if (res.ok) {
-        // Suponemos que el backend devuelve el rol en data.role
+      if (res.ok && data.token) { // Check for token presence
+        // Store token and user info in localStorage
+        localStorage.setItem('token', data.token);
+        if (data.username) localStorage.setItem('username', data.username);
+        if (data.role) localStorage.setItem('userRole', data.role);
+
+        // Navigate based on role
         if (data.role === 'admin') {
           navigate('/panel');
         } else if (data.role === 'profesor') {
           navigate('/professor-panel');
         } else {
-          alert('Rol de usuario no reconocido');
+          // If role is somehow undefined after successful login with token,
+          // it's an unexpected state, but we should handle it.
+          // Perhaps navigate to a generic dashboard or show an error.
+          // For now, alerting and staying on page or navigating to login.
+          localStorage.removeItem('token'); // Clean up partial login
+          localStorage.removeItem('username');
+          localStorage.removeItem('userRole');
+          alert('Rol de usuario no reconocido. Por favor, contacte al administrador.');
+          // navigate('/login'); // Optionally navigate back to login
         }
       } else {
-        alert(data.message || 'Credenciales incorrectas');
+        alert(data.message || 'Credenciales incorrectas o token no recibido.');
       }
     } catch (error) {
       alert('Error de conexión con el servidor');

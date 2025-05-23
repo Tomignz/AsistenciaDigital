@@ -1,7 +1,7 @@
 // createAdmin.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const User = require('./models/user.model');
+const User = require('./models/User.js');
 
 mongoose.connect('mongodb://127.0.0.1:27017/asistencia-back')
   .then(async () => {
