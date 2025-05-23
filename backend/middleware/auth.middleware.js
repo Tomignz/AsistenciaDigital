@@ -1,7 +1,6 @@
 const jwt = require('jsonwebtoken');
 
-// REMEMBER TO USE THE SAME SECRET KEY AS IN auth.routes.js
-const SECRET_KEY = 'YOUR_SECRET_KEY'; // It's crucial to use a strong, environment-specific secret in production
+// JWT_SECRET will be sourced from process.env.JWT_SECRET
 
 const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -17,7 +16,8 @@ const authMiddleware = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, SECRET_KEY);
+    // Use JWT_SECRET from environment variables
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded; // Attach user payload to request object
     next(); // Pass control to the next middleware or route handler
   } catch (error) {
