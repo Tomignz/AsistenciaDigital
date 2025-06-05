@@ -17,13 +17,13 @@ cp frontend/.env.example frontend/.env
 PORT=3000
 MONGODB_URI=mongodb://usuario:user.75%23@186.123.145.79:3969/asistencia-back
 JWT_SECRET=alguna_clave_segura
-CORS_ORIGIN=http://localhost:5173
+CORS_ORIGIN=https://www.attendready.com.ar
 ```
 
 3. En `frontend/.env` ajusta la URL del backend (por defecto apunta al servidor anterior):
 
 ```
-VITE_API_URL=http://186.123.145.79:3969
+VITE_API_URL=https://api.attendready.com.ar
 ```
 
 ## Uso en desarrollo
