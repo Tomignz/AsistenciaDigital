@@ -51,10 +51,10 @@ router.post('/login', async (req, res) => {
     }
 
     // Generate JWT Token
-    // REMEMBER TO CHANGE 'YOUR_SECRET_KEY' FOR PRODUCTION
+    const secret = process.env.JWT_SECRET || 'YOUR_SECRET_KEY';
     const token = jwt.sign(
       { userId: user._id, username: user.username, role: user.role },
-      'YOUR_SECRET_KEY', // It's crucial to use a strong, environment-specific secret in production
+      secret,
       { expiresIn: '1h' }
     );
 

@@ -8,6 +8,8 @@
  * @param {object} options The options for the fetch request (method, headers, body, etc.).
  * @returns {Promise<Response>} The promise returned by fetch.
  */
+export const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
 export const authenticatedFetch = async (url, options = {}) => {
   const token = localStorage.getItem('token');
 
@@ -30,10 +32,11 @@ export const authenticatedFetch = async (url, options = {}) => {
   const newOptions = {
     ...options,
     headers,
-    body, // Use the potentially stringified body
+    body,
   };
 
-  return fetch(url, newOptions);
+  const finalUrl = url.startsWith('/') ? `${API_BASE_URL}${url}` : url;
+  return fetch(finalUrl, newOptions);
 };
 
 // Example of a GET request using authenticatedFetch

@@ -7,7 +7,7 @@ export default function Login() {
   const [isRegister, setIsRegister] = useState(false);
   const navigate = useNavigate();
 
-  const API_URL = 'http://localhost:3000/api/auth'; // Ajusta si cambias el backend
+  const API_URL = `${import.meta.env.VITE_API_URL || ''}/api/auth`;
 
   const handleLogin = async () => {
     if (!user || !pass) return alert('Por favor ingresa usuario y contraseña');

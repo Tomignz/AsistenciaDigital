@@ -1,12 +1,68 @@
-# React + Vite
+# Asistencia Digital
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación para gestión de asistencias con roles de **administrador** y **profesor**. El frontend está construido con React y Tailwind CSS y el backend con Node.js, Express y MongoDB.
 
-Currently, two official plugins are available:
+## Configuración
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+1. Copia los archivos de ejemplo de variables de entorno y ajusta según corresponda:
 
-## Expanding the ESLint configuration
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+2. Edita `backend/.env` para definir la conexión a MongoDB, la clave JWT y el origen permitido de CORS:
+
+```
+PORT=3000
+MONGODB_URI=mongodb://usuario:user.75%23@186.123.145.79:3969/asistencia-back
+JWT_SECRET=alguna_clave_segura
+CORS_ORIGIN=https://www.attendready.com.ar
+```
+
+3. En `frontend/.env` ajusta la URL del backend (por defecto apunta al servidor anterior):
+
+```
+VITE_API_URL=https://api.attendready.com.ar
+```
+
+## Uso en desarrollo
+
+Instala las dependencias y levanta cada servicio en su carpeta respectiva.
+
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+En otra terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+El frontend estará disponible por defecto en `http://localhost:5173` y el backend en `http://localhost:3000` (o el puerto configurado).
+
+## Compilación para producción
+
+Para generar la versión optimizada del frontend:
+
+```bash
+cd frontend
+npm run build
+```
+
+Los archivos resultantes estarán en `frontend/dist`. Pueden servirse con cualquier hosting estático o configurarse en el backend para servirlos.
+
+## Funcionalidades principales
+
+- Autenticación con JWT y roles de usuario (administrador y profesor).
+- Registro y listado de asistencias manuales o mediante código QR.
+- Panel para administradores y profesores protegido por token.
+- Gestión de usuarios y asignaturas desde el panel de administración.
+- Conexión a MongoDB configurable mediante variables de entorno.
+
+La aplicación puede desplegarse en cualquier servidor Node.js con acceso a la base de datos especificada en las variables de entorno.

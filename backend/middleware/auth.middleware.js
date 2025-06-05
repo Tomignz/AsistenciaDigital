@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
 
+require('dotenv').config();
 // REMEMBER TO USE THE SAME SECRET KEY AS IN auth.routes.js
-const SECRET_KEY = 'YOUR_SECRET_KEY'; // It's crucial to use a strong, environment-specific secret in production
+const SECRET_KEY = process.env.JWT_SECRET || 'YOUR_SECRET_KEY';
 
 const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;

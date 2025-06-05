@@ -18,7 +18,6 @@ const ProfessorPanel = () => {
   const [error, setError] = useState(null); // Error state
   const navigate = useNavigate(); // For logout
 
-  const API_BASE_URL = 'http://localhost:3000/api/asistencias';
 
   useEffect(() => {
     if (activeTab === 'asistencias') {
@@ -27,9 +26,9 @@ const ProfessorPanel = () => {
         setError(null);
         try {
           // TODO: Future enhancement: Filter attendances by professorId
-          // e.g., const res = await authenticatedFetch(`${API_BASE_URL}?profesorId=${currentUser.id}`);
+          // e.g., const res = await authenticatedFetch(`/api/asistencias?profesorId=${currentUser.id}`);
           // This requires backend support and access to current user's ID.
-          const res = await authenticatedFetch(API_BASE_URL);
+          const res = await authenticatedFetch('/api/asistencias');
           if (!res.ok) {
             if (res.status === 401 || res.status === 403) {
               alert('Acceso denegado. Por favor, inicie sesión de nuevo.');
@@ -93,7 +92,7 @@ const ProfessorPanel = () => {
       let res;
       let updatedEntry;
       if (editIndex === null) { // Adding new
-        res = await authenticatedFetch(API_BASE_URL, { method: 'POST', body: payload });
+        res = await authenticatedFetch('/api/asistencias', { method: 'POST', body: payload });
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         updatedEntry = await res.json();
         setAttendances([...attendances, updatedEntry]);
@@ -105,7 +104,7 @@ const ProfessorPanel = () => {
           return;
         }
         const id = entryToUpdate._id;
-        res = await authenticatedFetch(`${API_BASE_URL}/${id}`, { method: 'PUT', body: payload });
+        res = await authenticatedFetch(`/api/asistencias/${id}`, { method: 'PUT', body: payload });
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         updatedEntry = await res.json();
         const updatedAttendances = [...attendances];
@@ -136,7 +135,7 @@ const ProfessorPanel = () => {
     setError(null);
 
     try {
-      const res = await authenticatedFetch(`${API_BASE_URL}/${id}`, { method: 'DELETE' });
+      const res = await authenticatedFetch(`/api/asistencias/${id}`, { method: 'DELETE' });
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
           alert('Acceso denegado. Por favor, inicie sesión de nuevo.');
