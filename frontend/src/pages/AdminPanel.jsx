@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { authenticatedFetch } from '../utils/api'; // Added import
+import { authenticatedFetch } from '../utils/api';
+import SubjectManager from '../components/SubjectManager';
 
 const AdminPanel = () => {
   const [attendances, setAttendances] = useState([]);
@@ -185,6 +186,8 @@ const AdminPanel = () => {
       <h2 className="text-4xl font-bold mb-10 text-center text-gray-800 dark:text-white">
         Panel de Administración
       </h2>
+
+      <SubjectManager />
 
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-2xl font-semibold text-gray-700 dark:text-white">

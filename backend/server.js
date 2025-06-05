@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
 require('dotenv').config();
 
 const app = express();
@@ -10,7 +11,8 @@ const PORT = process.env.PORT || 3000;
 app.locals.qrSessions = new Map();
 
 // Middlewares
-app.use(cors());
+app.use(helmet());
+app.use(cors({ origin: process.env.CORS_ORIGIN || '*', credentials: true }));
 app.use(express.json());
 
 // Conexión a MongoDB
@@ -21,9 +23,16 @@ mongoose
   .catch((err) => console.error('❌ Error al conectar a MongoDB:', err));
 
 // Rutas
-const authMiddleware = require('./middleware/auth.middleware.js'); // Added for JWT
+const authMiddleware = require('./middleware/auth.middleware.js');
+const roleMiddleware = require('./middleware/role.middleware');
 const asistenciaRoutes = require('./routes/asistencia.routes');
-app.use('/api/asistencias', authMiddleware, asistenciaRoutes); // Protected asistencia routes
+app.use('/api/asistencias', authMiddleware, asistenciaRoutes);
+
+const subjectRoutes = require('./routes/subject.routes');
+app.use('/api/subjects', authMiddleware, roleMiddleware('admin'), subjectRoutes);
+
+const userRoutes = require('./routes/user.routes');
+app.use('/api/users', authMiddleware, roleMiddleware('admin'), userRoutes);
 
 // IMPORTAR y USAR rutas de auth (signup, login)
 const authRoutes = require('./routes/auth.routes');
@@ -32,6 +41,11 @@ app.use('/api/auth', authRoutes);
 // IMPORTAR y USAR rutas de QR
 const qrRoutes = require('./routes/qr.routes.js');
 app.use('/api/qr', authMiddleware, qrRoutes); // Protected by authMiddleware
+
+// Simple health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
 
 // Iniciar servidor
 app.listen(PORT, () => {
