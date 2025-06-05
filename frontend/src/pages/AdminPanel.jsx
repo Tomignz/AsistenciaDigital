@@ -14,12 +14,11 @@ const AdminPanel = () => {
   const [formPresente, setFormPresente] = useState(true); // Added, default true
   const navigate = useNavigate();
 
-  const API_BASE_URL = 'http://localhost:3000/api/asistencias'; // Define base URL
 
   useEffect(() => {
     const fetchAttendances = async () => {
       try {
-        const res = await authenticatedFetch(API_BASE_URL); // Use authenticatedFetch and new URL
+        const res = await authenticatedFetch('/api/asistencias');
         if (!res.ok) {
           // Handle non-ok responses (e.g., 401, 403)
           if (res.status === 401 || res.status === 403) {
@@ -81,7 +80,7 @@ const AdminPanel = () => {
       let updatedEntry;
 
       if (editIndex === null) { // Adding new attendance
-        res = await authenticatedFetch(API_BASE_URL, { // Use authenticatedFetch and new URL
+        res = await authenticatedFetch('/api/asistencias', {
           method: 'POST',
           body: payload, // authenticatedFetch handles stringification and headers
         });
@@ -96,7 +95,7 @@ const AdminPanel = () => {
           return;
         }
         const id = entryToUpdate._id;
-        res = await authenticatedFetch(`${API_BASE_URL}/${id}`, { // Use authenticatedFetch and new URL
+        res = await authenticatedFetch(`/api/asistencias/${id}`, {
           method: 'PUT',
           body: payload, // authenticatedFetch handles stringification and headers
         });
@@ -126,7 +125,7 @@ const AdminPanel = () => {
     const id = entryToDelete._id;
 
     try {
-      const res = await authenticatedFetch(`${API_BASE_URL}/${id}`, { // Use authenticatedFetch and new URL
+      const res = await authenticatedFetch(`/api/asistencias/${id}`, {
         method: 'DELETE',
       });
       if (!res.ok) {
